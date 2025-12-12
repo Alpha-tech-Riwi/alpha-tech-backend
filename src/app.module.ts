@@ -8,6 +8,7 @@ import { SensorData } from './entities/sensor-data.entity';
 import { AuthModule } from './auth/auth.module';
 import { PetsModule } from './pets/pets.module';
 import { SensorDataModule } from './sensor-data/sensor-data.module';
+import { CollarController } from './collar/collar.controller';
 
 @Module({
   imports: [
@@ -25,7 +26,7 @@ import { SensorDataModule } from './sensor-data/sensor-data.module';
     PetsModule,
     SensorDataModule,
   ],
-  controllers: [AppController],
+  controllers: [AppController, CollarController],
   providers: [AppService],
 })
 export class AppModule {}

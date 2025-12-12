@@ -31,6 +31,18 @@ export class Pet {
   @Column({ default: true })
   isActive: boolean;
 
+  @Column({ unique: true, nullable: true })
+  qrCode: string;
+
+  @Column({ type: 'text', nullable: true })
+  description: string;
+
+  @Column({ nullable: true })
+  ownerPhone: string;
+
+  @Column({ default: true })
+  isPublicProfile: boolean;
+
   @ManyToOne(() => User, user => user.pets)
   @JoinColumn({ name: 'ownerId' })
   owner: User;

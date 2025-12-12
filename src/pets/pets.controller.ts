@@ -65,4 +65,41 @@ export class PetsController {
     }
     return this.petsService.getLocationHistory(pet.collarId);
   }
+
+  @Get(':id/qr')
+  async generateQRCode(@Param('id') id: string) {
+    return this.petsService.generateQRCode(id);
+  }
+
+  @Get(':id/sightings')
+  async getPetSightings(@Param('id') id: string) {
+    return this.petsService.getPetSightings(id);
+  }
+}
+
+// Controlador público para QR (sin autenticación)
+@Controller('public/pets')
+export class PublicPetsController {
+  constructor(private petsService: PetsService) {}
+
+  @Get('found/:qrCode')
+  async getPublicPetProfile(@Param('qrCode') qrCode: string) {
+    return this.petsService.getPublicPetProfile(qrCode);
+  }
+
+  @Post('found/:qrCode/report')
+  async reportFoundPet(
+    @Param('qrCode') qrCode: string,
+    @Body() reportData: {
+      finderName?: string;
+      finderPhone?: string;
+      finderEmail?: string;
+      latitude?: number;
+      longitude?: number;
+      message?: string;
+      photo?: string;
+    }
+  ) {
+    return this.petsService.reportFoundPet(qrCode, reportData);
+  }
 }
