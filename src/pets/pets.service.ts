@@ -1,7 +1,8 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, HttpException, HttpStatus } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Pet } from '../entities/pet.entity';
+import axios from 'axios';
 
 @Injectable()
 export class PetsService {
@@ -48,5 +49,46 @@ export class PetsService {
       where: { collarId },
       relations: ['owner']
     });
+  }
+
+  // Microservices integration
+  async getLocationData(collarId: string) {
+    try {
+      const response = await axios.get(`http://location-service:3002/location/collar/${collarId}/current`);
+      console.log('Location response:', response.data);
+      return response.data;
+    } catch (error) {
+      return null;
+    }
+  }
+
+  async getLocationHistory(collarId: string, limit = 10) {
+    try {
+      const response = await axios.get(`http://location-service:3002/location/collar/${collarId}/history?limit=${limit}`);
+      return response.data;
+    } catch (error) {
+      return [];
+    }
+  }
+
+  async getNotifications(ownerId: string, limit = 20) {
+    try {
+      console.log('Fetching notifications for owner:', ownerId);
+      const response = await axios.get(`http://notification-service:3003/notifications/owner/${ownerId}?limit=${limit}`);
+      console.log('Notifications response:', response.data);
+      return response.data;
+    } catch (error) {
+      console.error('Notifications error:', error.message);
+      return [];
+    }
+  }
+
+  async getUnreadNotificationsCount(ownerId: string) {
+    try {
+      const response = await axios.get(`http://notification-service:3003/notifications/owner/${ownerId}/unread-count`);
+      return response.data;
+    } catch (error) {
+      return { count: 0 };
+    }
   }
 }
