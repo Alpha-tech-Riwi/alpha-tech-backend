@@ -3,8 +3,9 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Pet } from '../entities/pet.entity';
 import { PetSighting } from '../entities/pet-sighting.entity';
+import { CacheService } from '../cache/cache.service';
 import axios from 'axios';
-import { v4 as uuidv4 } from 'uuid';
+
 
 @Injectable()
 export class PetsService {
@@ -13,6 +14,7 @@ export class PetsService {
     private petRepository: Repository<Pet>,
     @InjectRepository(PetSighting)
     private petSightingRepository: Repository<PetSighting>,
+    private cacheService: CacheService,
   ) {}
 
   async create(petData: {
@@ -26,23 +28,73 @@ export class PetsService {
     description?: string;
     ownerPhone?: string;
   }) {
-    // Generar QR único
-    const qrCode = uuidv4().substring(0, 8).toUpperCase();
-    
+    // Crear mascota primero sin QR
     const pet = this.petRepository.create({
       ...petData,
-      qrCode,
       isPublicProfile: true
     });
-    return this.petRepository.save(pet);
+    
+    const savedPet = await this.petRepository.save(pet);
+    
+    // Generar QR basado en el ID real de la mascota (primeros 8 caracteres)
+    const qrCode = `PET${savedPet.id.replace(/-/g, '').substring(0, 8).toUpperCase()}`;
+    
+    // Actualizar con el QR
+    await this.petRepository.update(savedPet.id, { qrCode });
+    savedPet.qrCode = qrCode;
+    
+    // Registrar automáticamente el QR en el QR Service
+    // console.log(`🔄 Intentando registrar QR automáticamente: ${qrCode} para ${savedPet.name}`);
+    
+    try {
+      const qrData = {
+        qrCode,
+        petData: {
+          petId: savedPet.id,
+          petName: savedPet.name,
+          ownerId: savedPet.ownerId,
+          ownerName: 'Noah',
+          ownerPhone: '+57 300 123 4567',
+          ownerEmail: 'noah123@mail.com',
+          petBreed: savedPet.breed,
+          petColor: 'No especificado',
+          emergencyContact: '+57 300 123 4567',
+          isActive: true
+        }
+      };
+      
+      // console.log('📤 Enviando datos QR:', JSON.stringify(qrData, null, 2));
+      
+      const response = await axios.post('http://qr-service:3004/qr/register', qrData);
+      
+      // console.log(`✅ QR Code ${qrCode} registrado automáticamente para ${savedPet.name}`);
+      // console.log('📥 Respuesta QR service:', response.data);
+      
+    } catch (error) {
+      console.error('❌ Error registrando QR automáticamente:', error.message);
+      if (error.response) {
+        console.error('📄 Respuesta de error:', error.response.data);
+      }
+    }
+    
+    return savedPet;
   }
 
   async findByOwner(ownerId: string) {
-    return this.petRepository.find({
-      where: { ownerId },
-      relations: ['sensorData'],
-      order: { createdAt: 'DESC' }
-    });
+    const cacheKey = this.cacheService.getUserPetsCacheKey(ownerId);
+    let pets = await this.cacheService.get(cacheKey);
+    
+    if (!pets) {
+      pets = await this.petRepository.find({
+        where: { ownerId },
+        relations: ['sensorData'],
+        order: { createdAt: 'DESC' }
+      });
+      
+      await this.cacheService.set(cacheKey, pets, 600); // 10 minutes
+    }
+    
+    return pets;
   }
 
   async findOne(id: string) {
@@ -66,18 +118,29 @@ export class PetsService {
 
   // Microservices integration
   async getLocationData(collarId: string) {
-    try {
-      const response = await axios.get(`http://localhost:3002/location/collar/${collarId}/current`);
-      console.log('Location response:', response.data);
-      return response.data;
-    } catch (error) {
-      return null;
+    const cacheKey = this.cacheService.getLocationCacheKey(collarId);
+    let locationData = await this.cacheService.get(cacheKey);
+    
+    if (!locationData) {
+      try {
+        const response = await axios.get(`http://host.docker.internal:3002/location/collar/${collarId}/current`);
+        locationData = response.data;
+        
+        // Cache for 30 seconds (location data changes frequently)
+        await this.cacheService.set(cacheKey, locationData, 30);
+        
+        // console.log('Location response:', locationData);
+      } catch (error) {
+        return null;
+      }
     }
+    
+    return locationData;
   }
 
   async getLocationHistory(collarId: string, limit = 10) {
     try {
-      const response = await axios.get(`http://localhost:3002/location/collar/${collarId}/history?limit=${limit}`);
+      const response = await axios.get(`http://host.docker.internal:3002/location/collar/${collarId}/history?limit=${limit}`);
       return response.data;
     } catch (error) {
       return [];
@@ -86,9 +149,9 @@ export class PetsService {
 
   async getNotifications(ownerId: string, limit = 20) {
     try {
-      console.log('Fetching notifications for owner:', ownerId);
-      const response = await axios.get(`http://localhost:3003/notifications/owner/${ownerId}?limit=${limit}`);
-      console.log('Notifications response:', response.data);
+      // console.log('Fetching notifications for owner:', ownerId);
+      const response = await axios.get(`http://notification-service:3003/notifications/owner/${ownerId}?limit=${limit}`);
+      // console.log('Notifications response:', response.data);
       return response.data;
     } catch (error) {
       console.error('Notifications error:', error.message);
@@ -98,7 +161,7 @@ export class PetsService {
 
   async getUnreadNotificationsCount(ownerId: string) {
     try {
-      const response = await axios.get(`http://localhost:3003/notifications/owner/${ownerId}/unread-count`);
+      const response = await axios.get(`http://notification-service:3003/notifications/owner/${ownerId}/unread-count`);
       return response.data;
     } catch (error) {
       return { count: 0 };
@@ -164,7 +227,7 @@ export class PetsService {
 
     // Enviar notificación al dueño
     try {
-      await axios.post('http://localhost:3003/notifications', {
+      await axios.post('http://notification-service:3003/notifications', {
         type: 'PET_FOUND',
         title: '¡Tu mascota fue encontrada!',
         message: `Alguien reportó haber encontrado a ${pet.name}. ${reportData.message || ''}`,
@@ -201,7 +264,7 @@ export class PetsService {
     }
 
     if (!pet.qrCode) {
-      const qrCode = uuidv4().substring(0, 8).toUpperCase();
+      const qrCode = `PET${Math.random().toString(36).substring(2, 10).toUpperCase()}`;
       await this.petRepository.update(petId, { qrCode });
       return { qrCode, url: `${process.env.FRONTEND_URL || 'http://localhost:5173'}/found/${qrCode}` };
     }

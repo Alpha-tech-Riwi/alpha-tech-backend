@@ -16,7 +16,7 @@ export class CollarController {
   async handleEmergency(@Body() body: any) {
     const { petId, action, settings } = body;
     
-    console.log(`🚨 Collar Emergency Command: ${action} for pet ${petId}`);
+    // console.log(`🚨 Collar Emergency Command: ${action} for pet ${petId}`);
     
     let collarState = this.collarStates.get(petId) || {
       isLost: false,
@@ -36,7 +36,7 @@ export class CollarController {
           soundInterval: settings?.soundInterval || 30,
           lightPattern: settings?.lightPattern || 'BLINK_FAST'
         };
-        console.log(`✅ Lost mode ACTIVATED for pet ${petId}`);
+        // console.log(`✅ Lost mode ACTIVATED for pet ${petId}`);
         break;
         
       case 'DEACTIVATE_LOST_MODE':
@@ -47,12 +47,12 @@ export class CollarController {
           lightEnabled: false,
           lightPattern: 'OFF'
         };
-        console.log(`✅ Lost mode DEACTIVATED for pet ${petId}`);
+        // console.log(`✅ Lost mode DEACTIVATED for pet ${petId}`);
         break;
     }
     
     this.collarStates.set(petId, collarState);
-    console.log(`📡 Sending command to ESP32 collar...`);
+    // console.log(`📡 Sending command to ESP32 collar...`);
     
     return {
       success: true,
