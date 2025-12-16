@@ -1,34 +1,40 @@
 # Alpha Tech Backend
 
-API REST para el sistema de collar inteligente para mascotas.
+REST API for the smart pet collar system.
 
-## 🚀 Inicio Rápido
+## 🚀 Quick Start
 
 ```bash
-# Con Docker
+# With Docker
 docker-compose up -d
 
-# Desarrollo local
+# Local development
 npm install
 npm run start:dev
 ```
 
-## 📡 Endpoints Principales
+## 📡 Main Endpoints
 
-### Autenticación
-- `POST /auth/register` - Registro
-- `POST /auth/login` - Login
-- `GET /auth/profile` - Perfil usuario
+### Authentication
+- `POST /auth/register` - User registration
+- `POST /auth/login` - User login
+- `GET /auth/profile` - User profile
 
-### Mascotas
-- `GET /pets` - Mis mascotas
-- `POST /pets` - Crear mascota
-- `GET /pets/:id` - Detalle mascota
+### Pets
+- `GET /pets` - Get my pets
+- `POST /pets` - Create pet
+- `GET /pets/:id` - Get pet details
+
+### Collar Management
+- `POST /collar/commands` - Send command to collar
+- `GET /collar/commands/:petId` - Get pending commands
+- `POST /collar/assign` - Assign collar to pet
 
 ### IoT (ESP32)
-- `POST /sensor-data/collar/:collarId` - Enviar datos
+- `POST /sensor-data/collar/:collarId` - Send sensor data
+- `POST /commands/ack` - Acknowledge command execution
 
-## 🔧 Variables de Entorno
+## 🔧 Environment Variables
 
 ```env
 DATABASE_URL=postgresql://admin:password123@localhost:5432/alpha_tech
@@ -36,9 +42,10 @@ JWT_SECRET=alpha-tech-secret-key
 PORT=3000
 ```
 
-## 🏗️ Stack Técnico
+## 🏗️ Tech Stack
 
 - NestJS + TypeScript
 - PostgreSQL + TypeORM
 - JWT Authentication
 - Docker
+- ESP32 Integration
