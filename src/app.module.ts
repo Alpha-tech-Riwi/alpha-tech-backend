@@ -12,7 +12,9 @@ import { PetsModule } from './pets/pets.module';
 import { SensorDataModule } from './sensor-data/sensor-data.module';
 import { VeterinaryModule } from './veterinary/veterinary.module';
 import { CacheConfigModule } from './cache/cache.module';
-import { CollarController } from './collar/collar.controller';
+import { CollarModule } from './collar/collar.module';
+import { CollarAssignment } from './collar/entities/collar-assignment.entity';
+import { CollarCommand } from './collar/entities/collar-command.entity';
 
 @Module({
   imports: [
@@ -23,7 +25,7 @@ import { CollarController } from './collar/collar.controller';
       username: process.env.DB_USERNAME || 'admin',
       password: process.env.DB_PASSWORD || 'password123',
       database: process.env.DB_NAME || 'alpha_tech',
-      entities: [User, Pet, SensorData, PetSighting, MedicalRecord],
+      entities: [User, Pet, SensorData, PetSighting, MedicalRecord, CollarAssignment, CollarCommand],
       synchronize: process.env.NODE_ENV === 'development',
     }),
     CacheConfigModule,
@@ -31,8 +33,9 @@ import { CollarController } from './collar/collar.controller';
     PetsModule,
     SensorDataModule,
     VeterinaryModule,
+    CollarModule,
   ],
-  controllers: [AppController, CollarController],
+  controllers: [AppController],
   providers: [AppService],
 })
 export class AppModule {}
